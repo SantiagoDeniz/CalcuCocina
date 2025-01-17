@@ -1,0 +1,12 @@
+Para armar el paquete:
+pyinstaller --onefile --hidden-import=pydantic --hidden-import=pydantic_core --hidden-import=pydantic.deprecated.decorator --noconsole --add-data ".env;." --add-data "assets/*;assets" --icon="assets/icono.ico" --name "CalcuCocina" main.py
+
+para iniciar o activar el entorno virtual:
+venv\Scripts\actívate
+
+para instalar las librerías compatibles:
+pip uninstall langchain pydantic langchain-google-genai -y
+pip install langchain==0.3.14 pydantic==2.10.5 langchain-google-genai==2.0.8
+
+para probar el archivo:
+python main.py
