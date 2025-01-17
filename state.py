@@ -1,0 +1,1 @@
+hidden_parts_global = None
