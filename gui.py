@@ -7,98 +7,99 @@ from utils import load_last_csv, save_last_csv, select_and_save_csv
 from editor import edit_ingredients_csv, edit_packaging_csv
 import state
 
+def create_button(parent, text, command, bg="#f4cccc", fg="#333333", font=("Arial", 9), **kwargs):
+    """
+    Crea un botón con estilo estándar.
+
+    Args:
+        parent (tk.Widget): El widget padre donde se colocará el botón.
+        text (str): El texto que mostrará el botón.
+        command (callable): La función que se ejecutará al hacer clic.
+        bg (str): Color de fondo del botón (opcional, por defecto #f4cccc).
+        fg (str): Color del texto del botón (opcional, por defecto #333333).
+        font (tuple): Fuente del texto (opcional, por defecto Arial, tamaño 9).
+        **kwargs: Argumentos adicionales que se pasan al constructor de `tk.Button`.
+
+    Returns:
+        tk.Button: El botón creado.
+    """
+    return tk.Button(parent, text=text, command=command, bg=bg, fg=fg, font=font, **kwargs)
 
 def create_main_window(root):
     root.configure(bg="#cce7e8")  # Light mint background for main window
 
     # Frames
-    left_frame = tk.Frame(root, bg="#e8f4f8")  # Pastel blue for left frame
+    left_frame = tk.Frame(root, bg="#e8f4f8")
     left_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
 
-    right_frame = tk.Frame(root, bg="#e8f4f8")  # Pastel blue for right frame
+    right_frame = tk.Frame(root, bg="#e8f4f8")
     right_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
-
-    # Add logo
-    try:
-        if hasattr(sys, '_MEIPASS'):
-            logo_path = os.path.join(sys._MEIPASS, "assets/logo.png")
-        else:
-            logo_path = "assets/logo.png"
-
-        logo_image = PhotoImage(file=logo_path)
-        logo_image = logo_image.subsample(6, 6)
-        logo_label = tk.Label(right_frame, image=logo_image, bg="#e8f4f8")
-        logo_label.image = logo_image
-        logo_label.pack(pady=7)
-    except Exception as e:
-        tk.Label(right_frame, text=f"[Logo no encontrado: {e}]", bg="#e8f4f8", fg="#333333", font=("Arial", 10)).pack(pady=10)
-
-    # Result display
-    tk.Label(right_frame, text="Resultado:", bg="#e8f4f8", fg="#333333", font=("Arial", 10)).pack(pady=3)
-    result_text = tk.StringVar()
-    result_display = tk.Text(right_frame, height=25, width=50, wrap="word", bg="#ffffff", fg="#333333", font=("Arial", 9))
-    result_display.pack(pady=2, padx=5)
-
-    def update_result():
-        result_display.delete("1.0", tk.END)
-        result_display.insert(tk.END, result_text.get())
-
-    result_text.trace("w", lambda *args: update_result())
+    ''''''
 
     # File selection for ingredients
-    ingredients_frame = tk.Frame(left_frame, bg="#e8f4f8")
-    ingredients_frame.pack(fill="x", pady=5)
+    def create_csv_loader(parent_frame, title, variable, file_type, edit_command):
+        """
+        Crea un conjunto de widgets para cargar y editar un archivo CSV.
 
-    tk.Label(ingredients_frame, text="Sube tu archivo CSV con ingredientes y costos:", bg="#e8f4f8", fg="#333333", font=("Arial", 9)).pack(pady=3)
+        Args:
+            parent_frame (tk.Frame): El frame donde se colocarán los widgets.
+            title (str): El título del conjunto de widgets.
+            variable (tk.StringVar): La variable vinculada al campo de entrada.
+            file_type (str): El tipo de archivo CSV ("ingredients" o "packaging").
+            edit_command (callable): La función a ejecutar para editar el archivo CSV.
+        """
+        frame = tk.Frame(parent_frame, bg="#e8f4f8")
+        frame.pack(fill="x", pady=5)
+
+        tk.Label(frame, text=title, bg="#e8f4f8", fg="#333333", font=("Arial", 9)).pack(pady=3)
+
+        last_csv = load_last_csv(file_type)
+        if last_csv and os.path.exists(last_csv):
+            variable.set(last_csv)
+
+        def select_file():
+            path = select_and_save_csv(file_type)
+            if path:
+                variable.set(path)
+
+        tk.Entry(frame, textvariable=variable, width=50, bg="#ffffff", fg="#333333", font=("Arial", 9)).pack(pady=5)
+
+        buttons_frame = tk.Frame(frame, bg="#e8f4f8")
+        buttons_frame.pack(pady=3)
+
+        create_button(buttons_frame, text="Seleccionar Archivo", command=select_file).pack(side="left", padx=5)
+        create_button(buttons_frame, text="Editar Archivo", command=edit_command).pack(side="left", padx=5)
+
+    # Carga de ingredientes
     ingredients_csv_path = tk.StringVar()
-    last_csv = load_last_csv("ingredients")
-    if last_csv and os.path.exists(last_csv):
-        ingredients_csv_path.set(last_csv)
+    create_csv_loader(
+        parent_frame=left_frame,
+        title="Sube tu archivo CSV con ingredientes y costos:",
+        variable=ingredients_csv_path,
+        file_type="ingredients",
+        edit_command=lambda: edit_ingredients_csv(ingredients_csv_path.get())
+    )
 
-    def select_ingredients_file():
-        path = select_and_save_csv("ingredients")
-        if path:
-            ingredients_csv_path.set(path)
-
-    tk.Entry(ingredients_frame, textvariable=ingredients_csv_path, width=50, bg="#ffffff", fg="#333333", font=("Arial", 9)).pack(pady=5)
-    file_buttons_frame = tk.Frame(ingredients_frame, bg="#e8f4f8")
-    file_buttons_frame.pack(pady=3)
-
-    tk.Button(file_buttons_frame, text="Seleccionar Archivo", command=select_ingredients_file, bg="#f4cccc", fg="#333333", font=("Arial", 9)).pack(side="left", padx=5)
-    tk.Button(file_buttons_frame, text="Editar Archivo", command=lambda: edit_ingredients_csv(ingredients_csv_path.get()), bg="#f4cccc", fg="#333333", font=("Arial", 9)).pack(side="left", padx=5)
-
-    tk.Label(ingredients_frame, text="Ingresa los ingredientes y cantidades del postre:", bg="#e8f4f8", fg="#333333", font=("Arial", 9)).pack(pady=3)
-    recipe_text = tk.Text(ingredients_frame, height=5, width=50, bg="#ffffff", fg="#333333", font=("Arial", 9))
+    tk.Label(left_frame, text="Ingresa los ingredientes y cantidades de la receta:", bg="#e8f4f8", fg="#333333", font=("Arial", 9)).pack(pady=3)
+    recipe_text = tk.Text(left_frame, height=5, width=50, bg="#ffffff", fg="#333333", font=("Arial", 9))
     recipe_text.pack(pady=3)
 
     # Empty section for spacing
     tk.Frame(left_frame, bg="#cce7e8", height=5).pack(fill="x", pady=2)
 
-    # File selection for packaging
-    packaging_frame = tk.Frame(left_frame, bg="#e8f4f8")
-    packaging_frame.pack(fill="x", pady=5)
-
-    tk.Label(packaging_frame, text="Sube tu archivo CSV con materiales para packaging:", bg="#e8f4f8", fg="#333333", font=("Arial", 9)).pack(pady=3)
+    # Carga de materiales para packaging
     packaging_csv_path = tk.StringVar()
-    last_packaging_csv = load_last_csv("packaging")
-    if last_packaging_csv and os.path.exists(last_packaging_csv):
-        packaging_csv_path.set(last_packaging_csv)
+    create_csv_loader(
+        parent_frame=left_frame,
+        title="Sube tu archivo CSV con materiales para packaging:",
+        variable=packaging_csv_path,
+        file_type="packaging",
+        edit_command=lambda: edit_packaging_csv(packaging_csv_path.get())
+    )
 
-    def select_packaging_file():
-        path = select_and_save_csv("packaging")
-        if path:
-            packaging_csv_path.set(path)
-
-    tk.Entry(packaging_frame, textvariable=packaging_csv_path, width=50, bg="#ffffff", fg="#333333", font=("Arial", 9)).pack(pady=5)
-    packaging_buttons_frame = tk.Frame(packaging_frame, bg="#e8f4f8")
-    packaging_buttons_frame.pack(pady=3)
-
-    tk.Button(packaging_buttons_frame, text="Seleccionar Archivo", command=select_packaging_file, bg="#f4cccc", fg="#333333", font=("Arial", 9)).pack(side="left", padx=5)
-    tk.Button(packaging_buttons_frame, text="Editar Archivo", command=lambda: edit_packaging_csv(packaging_csv_path.get()), bg="#f4cccc", fg="#333333", font=("Arial", 9)).pack(side="left", padx=5)
-
-    tk.Label(packaging_frame, text="Ingresa los materiales y cantidades para el packaging:", bg="#e8f4f8", fg="#333333", font=("Arial", 10)).pack(pady=5)
-    packaging_text = tk.Text(packaging_frame, height=5, width=50, bg="#ffffff", fg="#333333", font=("Arial", 9))
-    packaging_text.pack(pady=5)
+    tk.Label(left_frame, text="Ingresa los materiales y cantidades para el packaging:", bg="#e8f4f8", fg="#333333", font=("Arial", 10)).pack(pady=3)
+    packaging_text = tk.Text(left_frame, height=5, width=50, bg="#ffffff", fg="#333333", font=("Arial", 9))
+    packaging_text.pack(pady=3)
 
     # Empty section for spacing
     tk.Frame(left_frame, bg="#cce7e8", height=5).pack(fill="x", pady=2)
@@ -107,11 +108,11 @@ def create_main_window(root):
     others_frame = tk.Frame(left_frame, bg="#e8f4f8")
     others_frame.pack(fill="x", pady=10)
 
-    labor_profit_frame = tk.Frame(others_frame, bg="#e8f4f8")
-    labor_profit_frame.pack()
+    fixed_labor_profit_frame = tk.Frame(others_frame, bg="#e8f4f8")
+    fixed_labor_profit_frame.pack()
 
     # Fixed costs, labor hours, and profit margin aligned horizontally
-    combined_frame = tk.Frame(labor_profit_frame, bg="#e8f4f8")
+    combined_frame = tk.Frame(fixed_labor_profit_frame, bg="#e8f4f8")
     combined_frame.pack(anchor="center", pady=5)
 
     # Fixed costs input
@@ -139,7 +140,10 @@ def create_main_window(root):
     profit_percentage.pack()
 
     # Calculate button
-    tk.Button(others_frame, text="Calcular con IA", command=lambda: calculate_with_ai(
+    create_button(
+    others_frame,
+    text="Calcular con IA",
+    command=lambda: calculate_with_ai(
         ingredients_csv_path.get(),
         recipe_text.get("1.0", tk.END).strip(),
         packaging_csv_path.get(),
@@ -148,35 +152,66 @@ def create_main_window(root):
         labor_hours_entry.get().strip(),
         profit_percentage.get().strip(),
         result_text
-    ), bg="#4caf80", fg="#ffffff", font=("Arial", 12)).pack(pady=10)
+    ),
+    bg="#4caf80",
+    fg="#ffffff",
+    font=("Arial", 12)
+).pack(pady=10)
+
 
     # Load CSV content automatically if last CSV exists
+    last_csv = load_last_csv("ingredients")
     if last_csv and os.path.exists(last_csv):
         save_last_csv(ingredients_csv_path.get(), "ingredients")
 
-    if last_packaging_csv and os.path.exists(last_packaging_csv):
+    last_csv = load_last_csv("packaging")
+    if last_csv and os.path.exists(last_csv):
         save_last_csv(packaging_csv_path.get(), "packaging")
 
-    def consume_stock():
-            if not state.hidden_parts_global:
-                messagebox.showerror("Error", "No hay datos disponibles para consumir el stock.")
-                return
-            try:
-                consume_stock_logic(
-                    state.hidden_parts_global,  # Usar las partes ocultas de la respuesta
-                    ingredients_csv_path.get(),
-                    packaging_csv_path.get()
-                )
-                messagebox.showinfo("Éxito", "El stock se actualizó correctamente.")
-            except Exception as e:
-                messagebox.showerror("Error", f"No se pudo actualizar el stock: {e}")
+    #Add logo
+    try:
+        logo_path = os.path.join(sys._MEIPASS, "assets/logo.png") if hasattr(sys, '_MEIPASS') else "assets/logo.png"
 
-        # Botón "Consumir Stock"
-    tk.Button(
+        logo_image = PhotoImage(file=logo_path).subsample(6, 6)
+        logo_label = tk.Label(right_frame, image=logo_image, bg="#e8f4f8")
+        logo_label.image = logo_image
+        logo_label.pack(pady=7)
+    except Exception as e:
+        tk.Label(right_frame, text=f"[Logo no encontrado: {e}]", bg="#e8f4f8", fg="#333333", font=("Arial", 10)).pack(pady=10)
+
+    # Result display
+    tk.Label(right_frame, text="Resultado:", bg="#e8f4f8", fg="#333333", font=("Arial", 10)).pack(pady=3)
+    result_text = tk.StringVar()
+    result_display = tk.Text(right_frame, height=25, width=50, wrap="word", bg="#ffffff", fg="#333333", font=("Arial", 9))
+    result_display.pack(pady=2, padx=5)
+
+    def update_result():
+        result_display.delete("1.0", tk.END)
+        result_display.insert(tk.END, result_text.get())
+
+    result_text.trace("w", lambda *args: update_result())
+
+    def consume_stock():
+        if not state.hidden_parts_global:
+            messagebox.showerror("Error", "No hay datos disponibles para consumir el stock.")
+            return
+        try:
+            consume_stock_logic(
+                state.hidden_parts_global,  # Usar las partes ocultas de la respuesta
+                ingredients_csv_path.get(),
+                packaging_csv_path.get()
+            )
+            messagebox.showinfo("Éxito", "El stock se actualizó correctamente.")
+        except Exception as e:
+            messagebox.showerror("Error",  f"No se pudo actualizar el stock: {e}")
+
+
+    # Botón "Consumir Stock"
+    create_button(
         right_frame,
         text="Consumir Stock",
         command=consume_stock,
         bg="#fff2f2",
-        fg="#333333",
         font=("Arial", 9)
     ).pack(pady=10)
+
