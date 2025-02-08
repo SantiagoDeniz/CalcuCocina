@@ -1,6 +1,4 @@
-import os
-import csv
-import sys
+import os, csv, sys
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 import state
@@ -21,37 +19,75 @@ def calculate_with_ai(csv_file, recipe_input, packaging_csv, packaging_materials
         labor_cost = float(labor_hours) * 250
 
         prompt = f"""
-        Teniendo en cuenta la información de los archivos CSV proporcionados, donde el primero tiene ingredientes y sus costos correspondientes, ({contenido_csv_ingredientes}), calcula el costo del postre teniendo en cuenta los siguientes ingredientes: {recipe_input}.
-        El segundo CSV tiene los materiales y sus costos correspondientes, ({contenido_csv_packaging}), calcula el costo del packaging teniendo en cuenta los siguientes materiales: {packaging_materials}.
-        Ten en cuenta el valor total del packaging, ${fixed_costs} por los gastos fijos, ${labor_cost} por horas de trabajo (h).
-        Calcula el total de gastos que es ingredientes + packaging + gastos fijos, la ganancia si se desea que sea un {profit_margin}% del total de gastos (sin tener en cuenta horas de trabajo), la ganancia en mano que es ganancia + mano de obra y el valor final.
-        No me respondas el paso a paso ni el código ni el proceso.
-        Respondeme los siguientes puntos:
-        1. Cálculo de ingredientes (Los cálculos que hiciste para encontrar el valor de cada ingrediente en el siguiente formato:)
-        ingrediente: cantidad (con la conversión si es necesario a la medida del CSV) * costo = $ resultado
+        C (Contexto)
+        Se dispone de dos archivos CSV con información de costos y medidas:
 
-        2. Cálculo de packaging (Los cálculos que hiciste para encontrar el valor de cada material en el siguiente formato:)
-        material: cantidad (normalizada) * costo = $ resultado
+        Archivo de ingredientes ({contenido_csv_ingredientes}), que contiene una lista de ingredientes con sus costos y las unidades de medida correspondientes.
+        Archivo de materiales de empaque ({contenido_csv_packaging}), que contiene una lista de materiales de packaging con sus respectivos costos y medidas.
+        El objetivo es calcular el costo total de producir un postre a partir de ciertos ingredientes ({recipe_input}) y de empaquetarlo con determinados materiales ({packaging_materials}). Es imprescindible convertir las unidades de medida en caso de que las proporciones solicitadas difieran de las indicadas en el CSV (por ejemplo, no confundir gramos con kilogramos, ni litros con mililitros).
 
-        3. Cálculo final (Los demás cálculos)
-            Ingredientes: $ resultado
-            Packaging: $ resultado
-            Gastos fijos: $ resultado
-            Total de gastos: $ resultado
+        Una vez obtenidos los costos de ingredientes y packaging, se deben considerar además los gastos fijos (${fixed_costs}), el costo por horas de trabajo (${labor_cost}) y el margen de ganancia deseado ({profit_margin}%) para calcular:
 
-            Valor de horas de trabajo: $ resultado
-            Ganancia: $ resultado
-            Ganancia total (en mano): $ resultado
-            
-            ---------------------------
-            Precio final: $ resultado
-            ---------------------------
+        El costo total de producción (ingredientes + packaging + gastos fijos).
+        La ganancia si se desea que sea un porcentaje del total de gastos (sin incluir el valor de la mano de obra en la base de cálculo).
+        El total “en mano”, que integra la ganancia y las horas de trabajo.
+        El precio final.
+        R (Rol)
+        Actúa como un experto líder en la industria de la pastelería y la gestión de costos, con más de dos décadas de experiencia en el cálculo de costos, optimización de recetas y análisis de rentabilidad. Eres reconocido internacionalmente por tu habilidad para integrar la rentabilidad y la precisión financiera en el desarrollo de productos alimenticios.
 
-        4. Lista de ingredientes consumidos (Escritos igual que en el CSV y con las cantidades convertidas a las medidas del CSV sin mencionar la medida, en el siguiente formato, separados por líneas:)
+        A (Acción)
+
+        Lee la información del CSV de ingredientes y del CSV de materiales de empaque.
+        Aplica las conversiones de unidades necesarias para que los datos de la receta ({recipe_input}) y los materiales ({packaging_materials}) coincidan con la unidad de medida del CSV correspondiente.
+        Calcula el costo total de los ingredientes, detallando para cada uno: la cantidad exacta utilizada (ya convertida), el costo unitario y el costo resultante.
+        Calcula el costo total del packaging, detallando para cada material: la cantidad exacta utilizada (ya convertida) y su costo.
+        Suma los gastos fijos (${fixed_costs}) a los costos de ingredientes y packaging para obtener el costo total de gastos.
+        Aplica el margen de ganancia deseado ({profit_margin}%) al total de gastos, sin incluir el costo de la mano de obra en el cálculo de esta ganancia, y súmale la mano de obra (${labor_cost}) para obtener la “ganancia total en mano”.
+        Muestra el precio final, que es la suma de los gastos totales y la ganancia total en mano.
+        No detalles el paso a paso ni muestres código o proceso; únicamente reporta los resultados en el formato que se describe a continuación, respetando el número de saltos de línea solicitados.
+        F (Formato)
+        El resultado se presentará en un bloque de texto con la siguiente estructura (con el número exacto de saltos de línea indicado y sin añadir explicaciones extra):
+
+            1. Cálculo de ingredientes (uno por línea):
+            ingrediente: cantidad_conversión * costo = $resultado [aclaración de la conversión si se realizó]
+            ... (repetir para cada ingrediente) ...
+
+            2. Cálculo de packaging (uno por línea):
+            material: cantidad_conversión * costo = $resultado
+            ... (repetir para cada material) ...
+
+            3. Cálculo final
+                Ingredientes: $resultado
+                Packaging: $resultado
+                Gastos fijos: $resultado
+                Total de gastos: $resultado
+
+                Valor de horas de trabajo: $resultado
+                Ganancia: $resultado
+                Ganancia total (en mano): $resultado
+                
+                ---------------------------
+                Precio final: $resultado
+                ---------------------------
+
+            === NO INCLUIR ESTO EN EL MENSAJE PRINCIPAL ===
+
+            4. Lista de ingredientes consumidos (uno por línea, cantidades en la unidad del CSV sin mencionar la unidad):
+            ingrediente: cantidad
             ingrediente: cantidad
 
-        5. Lista de materiales consumidos (Escritos igual que en el CSV y en las medidas del CSV sin mencionarlas, en el siguiente formato, separados por líneas:)
+            5. Lista de materiales consumidos (uno por línea, cantidades en la unidad del CSV sin mencionar la unidad):
             material: cantidad
+            material: cantidad
+
+        Nota:
+
+        No proporcionar ningún paso de cálculo o explicación adicional.
+        No incluir información distinta a la solicitada.
+        Respetar estrictamente el orden, el contenido y los saltos de línea solicitados.
+        Incluir todas las aclaraciones de conversión solo entre corchetes al final de cada cálculo de ingrediente, si es necesario.
+        T (Público objetivo)
+        Esta instrucción está dirigida específicamente a Gemini, con el fin de que genere la respuesta final de acuerdo con los cálculos de costos, conversiones de unidades y ganancias requeridas. En última instancia también está  dirigida a los usuarios que soliciten la consulta, usualmente cocineros o pasteleros emprendedores.
         """
 
         # Load environment variables. Dynamically determine the path of the .env file
@@ -65,7 +101,9 @@ def calculate_with_ai(csv_file, recipe_input, packaging_csv, packaging_materials
             google_api_key=os.getenv("GENAI_API_KEY"),
             temperature=0
         )
+
         response = llm.invoke(input=prompt).content
+        print(response)
         visible_part, hidden_part = split_response_parts(response)
 
         # Guardar las partes ocultas en la variable global
@@ -81,8 +119,8 @@ def calculate_with_ai(csv_file, recipe_input, packaging_csv, packaging_materials
 def consume_stock_logic(hidden_part, ingredients_csv_path, packaging_csv_path):
     try:
         # Extraer las listas de consumo de ingredientes y materiales
-        ingredients_usage = extract_usage_list(hidden_part, section="Lista de ingredientes consumidos")
-        packaging_usage = extract_usage_list(hidden_part, section="Lista de materiales consumidos")
+        ingredients_usage = extract_usage_list(hidden_part, section="Lista de ingredientes consumidos:")
+        packaging_usage = extract_usage_list(hidden_part, section="Lista de materiales consumidos:")
 
         # Actualizar los CSVs con las cantidades utilizadas
         update_csv_stock(ingredients_csv_path, ingredients_usage)
@@ -101,8 +139,9 @@ def extract_usage_list(response_text, section):
             name, quantity = line.split(": ")
             usage[name.strip()] = float(quantity.strip())
     except Exception:
-        raise Exception(f"No se pudo procesar la sección {section}.")
+        raise Exception(f"No se pudo procesar la sección '{section}'.")
     return usage
+
 
 
 def update_csv_stock(csv_path, usage_data):
@@ -149,13 +188,16 @@ def update_csv_stock(csv_path, usage_data):
         raise Exception(f"Error al actualizar el archivo CSV {csv_path}: {e}")
 
 def split_response_parts(response_text):
-    """Divide la respuesta en partes visibles y ocultas."""
     try:
-        # Encuentra las partes visibles (1-3) y ocultas (4-5)
-        visible_end = response_text.find("4. Lista de ingredientes")
+        visible_end = response_text.find("=== NO INCLUIR ESTO EN EL MENSAJE PRINCIPAL ===")
+        
+        if visible_end == -1:
+            raise ValueError("No se encontró el delimitador en la respuesta.")
+
         visible_part = response_text[:visible_end].strip()
-        hidden_start = response_text.find("4. Lista de ingredientes")
-        hidden_part = response_text[hidden_start:].strip()
+        hidden_part = response_text[visible_end:].strip()
+
         return visible_part, hidden_part
     except Exception:
         raise Exception("Error al dividir las partes visibles y ocultas del texto de respuesta.")
+
