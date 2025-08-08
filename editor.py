@@ -4,170 +4,166 @@ import csv
 import os
 import sys
 
-def edit_ingredients_csv(csv_file):
-    """Editar CSV de ingredientes con 4 columnas."""
-    edit_csv(csv_file, "Editar Ingredientes", ["Ingrediente", "Costo", "Unidad", "Stock"])
 
-def edit_packaging_csv(csv_file):
-    """Editar CSV de materiales para packaging con 3 columnas."""
-    edit_csv(csv_file, "Editar Materiales para Packaging", ["Material", "Costo", "Stock"])
 
-def edit_csv(csv_file, title, headers):
-    if not os.path.exists(csv_file):
-        messagebox.showerror("Error", "No CSV file loaded to edit.")
+def editar_csv_ingredientes(ruta_csv):
+    """
+    Edita un archivo CSV de ingredientes con 4 columnas.
+    """
+    editar_csv(ruta_csv, "Editar Ingredientes", ["Ingrediente", "Costo", "Unidad", "Stock"])
+
+def editar_csv_packaging(ruta_csv):
+    """
+    Edita un archivo CSV de materiales para packaging con 3 columnas.
+    """
+    editar_csv(ruta_csv, "Editar Materiales para Packaging", ["Material", "Costo", "Stock"])
+
+
+def editar_csv(ruta_csv, titulo, encabezados):
+    if not os.path.exists(ruta_csv):
+        messagebox.showerror("Error", "No se ha cargado un archivo CSV para editar.")
         return
 
-    def save_changes():
-        update_rows()
-        for row in rows[1:]:  # Ignore headers when checking completeness
-            if not all(row):
-                messagebox.showerror("Error", "All rows must be complete before saving.")
+    def guardar_cambios():
+        actualizar_filas()
+        for fila in filas[1:]:
+            if not all(fila):
+                messagebox.showerror("Error", "Todas las filas deben estar completas antes de guardar.")
                 return
         try:
-            rows[0] = headers  # Ensure headers are correct
-            data_rows = rows[1:]
-            data_rows.sort(key=lambda x: x[0].lower())  # Sort rows alphabetically by the first column
-            with open(csv_file, mode='w', encoding='utf-8', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerows(rows)
-            messagebox.showinfo("Success", "CSV file updated successfully.")
-            editor_window.destroy()
+            filas[0] = encabezados
+            filas_datos = filas[1:]
+            filas_datos.sort(key=lambda x: x[0].lower())
+            with open(ruta_csv, mode='w', encoding='utf-8', newline='') as archivo:
+                escritor = csv.writer(archivo)
+                escritor.writerows(filas)
+            messagebox.showinfo("Éxito", "Archivo CSV actualizado correctamente.")
+            ventana_editor.destroy()
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
-    def add_row():
-        rows.append(["" for _ in headers])
-        entries.append([None for _ in headers])
-        update_display()
+    def agregar_fila():
+        filas.append(["" for _ in encabezados])
+        entradas.append([None for _ in encabezados])
+        actualizar_display()
 
-    def delete_row():
-        selected_row = listbox.curselection()
-        if selected_row:
-            row_index = selected_row[0]
-            if row_index == 0:
-                messagebox.showerror("Error", "Cannot delete the header row.")
+    def eliminar_fila():
+        fila_seleccionada = listbox.curselection()
+        if fila_seleccionada:
+            idx = fila_seleccionada[0]
+            if idx == 0:
+                messagebox.showerror("Error", "No se puede eliminar la fila de encabezado.")
             else:
-                rows.pop(row_index)
-                entries.pop(row_index)
-                update_display()
+                filas.pop(idx)
+                entradas.pop(idx)
+                actualizar_display()
         else:
-            messagebox.showerror("Error", "Please select a row to delete.")
+            messagebox.showerror("Error", "Por favor selecciona una fila para eliminar.")
 
-    def update_display():
-        for widget in entry_frame.winfo_children():
+    def actualizar_display():
+        for widget in frame_entradas.winfo_children():
             widget.destroy()
 
         listbox.delete(0, tk.END)
 
-        for i, row in enumerate(rows):
-            row_display = " | ".join(row)
-            listbox.insert(tk.END, row_display)
+        for i, fila in enumerate(filas):
+            fila_display = " | ".join(fila)
+            listbox.insert(tk.END, fila_display)
 
-            # Definir el color de fondo según la fila
             bg_color = "#d9ead3" if i == 0 else ("#ffffff" if i % 2 == 0 else "#fff2f2")
 
-            entry_row = tk.Frame(entry_frame, bg=bg_color)
-            entry_row.pack(fill="x", pady=2)
+            fila_frame = tk.Frame(frame_entradas, bg=bg_color)
+            fila_frame.pack(fill="x", pady=2)
 
-            entry_row_entries = []
-            for col_index, value in enumerate(row):
-                # Definir el ancho según la columna
-                if col_index == 0:  # Primera columna (Ingrediente o Material)
+            fila_entradas = []
+            for col_idx, valor in enumerate(fila):
+                if col_idx == 0:
                     width = 27
-                elif col_index == 1:  # Segunda columna (Costo)
+                elif col_idx == 1:
                     width = 10
-                elif col_index == 2:  # Tercera columna (Unidad o Stock)
+                elif col_idx == 2:
                     width = 9
-                else:  # Columnas adicionales
+                else:
                     width = 9
-
-                # Crear entrada con propiedades específicas
                 entry = tk.Entry(
-                    entry_row,
+                    fila_frame,
                     width=width,
                     bg=bg_color,
                     fg="#333333",
                     font=("Arial", 10, "bold" if i == 0 else "normal"),
-                    justify=("left" if i != 0 and col_index == 0 else "center")
+                    justify=("left" if i != 0 and col_idx == 0 else "center")
                 )
-                entry.insert(0, value)
+                entry.insert(0, valor)
                 entry.pack(side="left", padx=2)
-
-                # Hacer que las celdas de encabezado sean de solo lectura
                 entry.config(state="normal" if i > 0 else "readonly")
-                entry_row_entries.append(entry)
+                fila_entradas.append(entry)
+            entradas.append(fila_entradas)
 
-            entries.append(entry_row_entries)
+    def actualizar_filas():
+        for i, fila_frame in enumerate(frame_entradas.winfo_children()):
+            filas[i] = [child.get() for child in fila_frame.winfo_children() if isinstance(child, tk.Entry)]
 
-
-    def update_rows():
-        for i, entry_row in enumerate(entry_frame.winfo_children()):
-            rows[i] = [child.get() for child in entry_row.winfo_children() if isinstance(child, tk.Entry)]
 
     try:
-        with open(csv_file, mode='r', encoding='utf-8') as file:
-            rows = [row for row in csv.reader(file)]
-            if not rows or rows[0] != headers:  # Ensure correct headers
-                rows.insert(0, headers)
-            entries = []
+        with open(ruta_csv, mode='r', encoding='utf-8') as archivo:
+            filas = [row for row in csv.reader(archivo)]
+            if not filas or filas[0] != encabezados:
+                filas.insert(0, encabezados)
+        entradas = []
 
-        editor_window = Toplevel()
-        editor_window.title(title)
-        editor_window.geometry("900x450")
-        editor_window.configure(bg="#b6d7a8")
+        ventana_editor = Toplevel()
+        ventana_editor.title(titulo)
+        ventana_editor.geometry("900x450")
+        ventana_editor.configure(bg="#b6d7a8")
 
         try:
             if hasattr(sys, '_MEIPASS'):
-                icon_path = os.path.join(sys._MEIPASS, "assets/icono.ico")
+                icono_path = os.path.join(sys._MEIPASS, "assets/icono.ico")
             else:
-                icon_path = "assets/icono.ico"
-
-            editor_window.iconbitmap(icon_path)
+                icono_path = "assets/icono.ico"
+            ventana_editor.iconbitmap(icono_path)
         except Exception as e:
             print(f"Error al cargar el ícono: {e}")
 
-        # Frames for columns
-        left_column = tk.Frame(editor_window, bg="#b6d7a8", width=450)
-        left_column.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        columna_izq = tk.Frame(ventana_editor, bg="#b6d7a8", width=450)
+        columna_izq.pack(side="left", fill="both", expand=True, padx=10, pady=10)
 
-        right_column = tk.Frame(editor_window, bg="#b6d7a8", width=450)
-        right_column.pack(side="right", fill="both", expand=True, padx=10, pady=10)
+        columna_der = tk.Frame(ventana_editor, bg="#b6d7a8", width=450)
+        columna_der.pack(side="right", fill="both", expand=True, padx=10, pady=10)
 
-        # Left column: Edit rows
-        tk.Label(left_column, text=title, bg="#d9ead3", fg="#333333", font=("Arial", 14)).pack(pady=10)
+        tk.Label(columna_izq, text=titulo, bg="#d9ead3", fg="#333333", font=("Arial", 14)).pack(pady=10)
 
-        left_canvas = tk.Canvas(left_column, bg="#d9ead3")
-        left_scrollbar = Scrollbar(left_column, orient="vertical", command=left_canvas.yview)
-        left_scrollbar.pack(side="right", fill="y")
-        left_canvas.pack(side="left", fill="both", expand=True)
-        left_canvas.configure(yscrollcommand=left_scrollbar.set)
+        canvas_izq = tk.Canvas(columna_izq, bg="#d9ead3")
+        scrollbar_izq = Scrollbar(columna_izq, orient="vertical", command=canvas_izq.yview)
+        scrollbar_izq.pack(side="right", fill="y")
+        canvas_izq.pack(side="left", fill="both", expand=True)
+        canvas_izq.configure(yscrollcommand=scrollbar_izq.set)
 
-        entry_frame = tk.Frame(left_canvas, bg="#d9ead3")
-        left_canvas.create_window((0, 0), window=entry_frame, anchor="nw")
+        frame_entradas = tk.Frame(canvas_izq, bg="#d9ead3")
+        canvas_izq.create_window((0, 0), window=frame_entradas, anchor="nw")
 
         def resize_canvas(event):
-            left_canvas.configure(scrollregion=left_canvas.bbox("all"))
+            canvas_izq.configure(scrollregion=canvas_izq.bbox("all"))
 
-        entry_frame.bind("<Configure>", resize_canvas)
+        frame_entradas.bind("<Configure>", resize_canvas)
 
-        def scroll_left_canvas(event):
-            left_canvas.yview_scroll(-1 * (event.delta // 120), "units")
+        def scroll_canvas_izq(event):
+            canvas_izq.yview_scroll(-1 * (event.delta // 120), "units")
 
-        left_canvas.bind("<Enter>", lambda _: left_canvas.bind_all("<MouseWheel>", scroll_left_canvas))
-        left_canvas.bind("<Leave>", lambda _: left_canvas.unbind_all("<MouseWheel>"))
+        canvas_izq.bind("<Enter>", lambda _: canvas_izq.bind_all("<MouseWheel>", scroll_canvas_izq))
+        canvas_izq.bind("<Leave>", lambda _: canvas_izq.unbind_all("<MouseWheel>"))
 
-        # Right column: Listbox and buttons
-        tk.Label(right_column, text="Seleccionar Fila", bg="#d9ead3", fg="#333333", font=("Arial", 14)).pack(pady=5)
+        tk.Label(columna_der, text="Seleccionar Fila", bg="#d9ead3", fg="#333333", font=("Arial", 14)).pack(pady=5)
 
-        listbox_frame = tk.Frame(right_column, bg="#d9ead3")
-        listbox_frame.pack(fill="both", expand=True, pady=10)
+        frame_listbox = tk.Frame(columna_der, bg="#d9ead3")
+        frame_listbox.pack(fill="both", expand=True, pady=10)
 
-        listbox_scrollbar = Scrollbar(listbox_frame, orient="vertical")
-        listbox_scrollbar.pack(side="right", fill="y")
+        scrollbar_listbox = Scrollbar(frame_listbox, orient="vertical")
+        scrollbar_listbox.pack(side="right", fill="y")
 
-        listbox = tk.Listbox(listbox_frame, height=10, width=50, bg="#ffffff", fg="#333333", font=("Arial", 10), yscrollcommand=listbox_scrollbar.set)
+        listbox = tk.Listbox(frame_listbox, height=10, width=50, bg="#ffffff", fg="#333333", font=("Arial", 10), yscrollcommand=scrollbar_listbox.set)
         listbox.pack(fill="both", padx=10, pady=10)
-        listbox_scrollbar.config(command=listbox.yview)
+        scrollbar_listbox.config(command=listbox.yview)
 
         def scroll_listbox(event):
             listbox.yview_scroll(-1 * (event.delta // 120), "units")
@@ -175,14 +171,14 @@ def edit_csv(csv_file, title, headers):
         listbox.bind("<Enter>", lambda _: listbox.bind_all("<MouseWheel>", scroll_listbox))
         listbox.bind("<Leave>", lambda _: listbox.unbind_all("<MouseWheel>"))
 
-        button_frame = tk.Frame(right_column, bg="#b6d7a8")
-        button_frame.pack(fill="x", pady=20)
+        frame_botones = tk.Frame(columna_der, bg="#b6d7a8")
+        frame_botones.pack(fill="x", pady=20)
 
-        tk.Button(button_frame, text="Agregar Nueva Fila", command=add_row, bg="#9fc5e8", fg="#333333", font=("Arial", 10)).pack(fill="x", padx=20, pady=5)
-        tk.Button(button_frame, text="Eliminar Fila Seleccionada", command=delete_row, bg="#9fc5e8", fg="#333333", font=("Arial", 10)).pack(fill="x", padx=20, pady=5)
-        tk.Button(button_frame, text="Guardar Cambios", command=save_changes, bg="#6fa8dc", fg="#ffffff", font=("Arial", 12, "bold")).pack(fill="x", padx=20, pady=10)
+        tk.Button(frame_botones, text="Agregar Nueva Fila", command=agregar_fila, bg="#9fc5e8", fg="#333333", font=("Arial", 10)).pack(fill="x", padx=20, pady=5)
+        tk.Button(frame_botones, text="Eliminar Fila Seleccionada", command=eliminar_fila, bg="#9fc5e8", fg="#333333", font=("Arial", 10)).pack(fill="x", padx=20, pady=5)
+        tk.Button(frame_botones, text="Guardar Cambios", command=guardar_cambios, bg="#6fa8dc", fg="#ffffff", font=("Arial", 12, "bold")).pack(fill="x", padx=20, pady=10)
 
-        update_display()
+        actualizar_display()
 
     except Exception as e:
         messagebox.showerror("Error", str(e))

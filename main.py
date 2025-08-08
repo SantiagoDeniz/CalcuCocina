@@ -1,7 +1,8 @@
+
 import tkinter as tk
 import os
 import sys
-from gui import create_main_window
+from gui import crear_ventana_principal
 
 if __name__ == "__main__":
     root = tk.Tk()
@@ -20,5 +21,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Error al cargar el icono: {e}")
 
-    create_main_window(root)
+    crear_ventana_principal(root)
     root.mainloop()
