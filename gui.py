@@ -11,7 +11,15 @@ def crear_boton(padre, texto, comando, bg="#f4cccc", fg="#333333", font=("Arial"
     """
     Crea un botón con estilo estándar.
     """
-    return tk.Button(padre, text=texto, command=comando, bg=bg, fg=fg, font=font, **kwargs)
+    return tk.Button(padre, text=texto, command=comando, bg=bg, fg=fg, font=font, activebackground="#b6d7a8", activeforeground="#222222", cursor="hand2", **kwargs)
+    btn = tk.Button(padre, text=texto, command=comando, bg=bg, fg=fg, font=font, activebackground="#b6d7a8", activeforeground="#222222", cursor="hand2", **kwargs)
+    def on_enter(e):
+        btn['bg'] = '#b6d7a8'
+    def on_leave(e):
+        btn['bg'] = bg
+    btn.bind("<Enter>", on_enter)
+    btn.bind("<Leave>", on_leave)
+    return btn
 
 def crear_ventana_principal(raiz):
     """
@@ -22,18 +30,40 @@ def crear_ventana_principal(raiz):
     # Frames
     marco_izquierdo = tk.Frame(raiz, bg="#e8f4f8")
     marco_izquierdo.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+    raiz.option_add("*Font", "Segoe UI 10")
+    raiz.minsize(950, 650)
+
+    # Área de ayuda rápida
+    ayuda_frame = tk.Frame(raiz, bg="#e3f0fa", bd=2, relief="groove")
+    ayuda_frame.pack(side="top", fill="x", padx=10, pady=7)
+    tk.Label(ayuda_frame, text="Bienvenido a CalcuCocina", bg="#e3f0fa", fg="#1a5276", font=("Segoe UI", 15, "bold")).pack(side="left", padx=10)
+    tk.Label(ayuda_frame, text="1. Sube tus archivos CSV de ingredientes y packaging. 2. Escribe tu receta y materiales. 3. Completa gastos, horas y ganancia. 4. Haz clic en 'Calcular con IA'. 5. Usa 'Consumir Stock' para actualizar inventario.", bg="#e3f0fa", fg="#333333", font=("Segoe UI", 10)).pack(side="left", padx=20)
 
     marco_derecho = tk.Frame(raiz, bg="#e8f4f8")
     marco_derecho.pack(side="right", fill="both", expand=True, padx=10, pady=10)
 
-    def crear_cargador_csv(marco_padre, titulo, variable, tipo_archivo, comando_editar):
+    def crear_cargador_csv(marco_padre, titulo, variable, tipo_archivo, comando_editar, tooltip_text=None):
         """
         Crea widgets para cargar y editar un archivo CSV.
         """
         frame = tk.Frame(marco_padre, bg="#e8f4f8")
         frame.pack(fill="x", pady=5)
 
-        tk.Label(frame, text=titulo, bg="#e8f4f8", fg="#333333", font=("Arial", 9)).pack(pady=3)
+        label = tk.Label(frame, text=titulo, bg="#e8f4f8", fg="#1a5276", font=("Segoe UI", 11, "bold"))
+        label.pack(pady=3)
+        if tooltip_text:
+            def show_tip(event):
+                tip = tk.Toplevel()
+                tip.wm_overrideredirect(True)
+                tip.geometry(f"+{event.x_root+10}+{event.y_root+10}")
+                tk.Label(tip, text=tooltip_text, bg="#fafdff", fg="#333333", relief="solid", borderwidth=1, font=("Segoe UI", 9)).pack()
+                label._tipwindow = tip
+            def hide_tip(event):
+                if hasattr(label, '_tipwindow') and label._tipwindow:
+                    label._tipwindow.destroy()
+                    label._tipwindow = None
+            label.bind("<Enter>", show_tip)
+            label.bind("<Leave>", hide_tip)
 
         ultimo_csv = cargar_ultimo_csv(tipo_archivo)
         if ultimo_csv and os.path.exists(ultimo_csv):
@@ -44,42 +74,15 @@ def crear_ventana_principal(raiz):
             if ruta:
                 variable.set(ruta)
 
-        tk.Entry(frame, textvariable=variable, width=50, bg="#ffffff", fg="#333333", font=("Arial", 9)).pack(pady=5)
+        entry = tk.Entry(frame, textvariable=variable, width=50, bg="#ffffff", fg="#333333", font=("Segoe UI", 10))
+        entry.pack(pady=5)
+        entry.config(relief="groove", bd=2)
 
         marco_botones = tk.Frame(frame, bg="#e8f4f8")
         marco_botones.pack(pady=3)
 
-        crear_boton(marco_botones, texto="Seleccionar Archivo", comando=seleccionar_archivo).pack(side="left", padx=5)
-        crear_boton(marco_botones, texto="Editar Archivo", comando=comando_editar).pack(side="left", padx=5)
-
-    # Carga de ingredientes
-    ruta_csv_ingredientes = tk.StringVar()
-    crear_cargador_csv(
-        marco_padre=marco_izquierdo,
-        titulo="Sube tu archivo CSV con ingredientes y costos:",
-        variable=ruta_csv_ingredientes,
-        tipo_archivo="ingredients",
-        comando_editar=lambda: editar_csv_ingredientes(ruta_csv_ingredientes.get())
-    )
-
-    tk.Label(marco_izquierdo, text="Ingresa los ingredientes y cantidades de la receta:", bg="#e8f4f8", fg="#333333", font=("Arial", 9)).pack(pady=3)
-    texto_receta = tk.Text(marco_izquierdo, height=5, width=50, bg="#ffffff", fg="#333333", font=("Arial", 9))
-    texto_receta.pack(pady=3)
-
-    tk.Frame(marco_izquierdo, bg="#cce7e8", height=5).pack(fill="x", pady=2)
-
-    # Carga de materiales para packaging
-    ruta_csv_packaging = tk.StringVar()
-    crear_cargador_csv(
-        marco_padre=marco_izquierdo,
-        titulo="Sube tu archivo CSV con materiales para packaging:",
-        variable=ruta_csv_packaging,
-        tipo_archivo="packaging",
-        comando_editar=lambda: editar_csv_packaging(ruta_csv_packaging.get())
-    )
-
-    tk.Label(marco_izquierdo, text="Ingresa los materiales y cantidades para el packaging:", bg="#e8f4f8", fg="#333333", font=("Arial", 10)).pack(pady=3)
-    texto_packaging = tk.Text(marco_izquierdo, height=5, width=50, bg="#ffffff", fg="#333333", font=("Arial", 9))
+        crear_boton(marco_botones, texto="Seleccionar Archivo", comando=seleccionar_archivo, bg="#b6d7a8", fg="#222222", font=("Segoe UI", 10, "bold")).pack(side="left", padx=5)
+        crear_boton(marco_botones, texto="Editar Archivo", comando=comando_editar, bg="#9fc5e8", fg="#222222", font=("Segoe UI", 10, "bold")).pack(side="left", padx=5)
     texto_packaging.pack(pady=3)
 
     tk.Frame(marco_izquierdo, bg="#cce7e8", height=5).pack(fill="x", pady=2)
@@ -100,7 +103,20 @@ def crear_ventana_principal(raiz):
     tk.Label(marco_gastos, text="Gastos fijos ($):", bg="#e8f4f8", fg="#333333", font=("Arial", 9)).pack()
     entrada_gastos = tk.Entry(marco_gastos, bg="#ffffff", fg="#333333", font=("Arial", 9), width=10, justify="center")
     entrada_gastos.insert(0, "50")
-    entrada_gastos.pack()
+        label = tk.Label(frame, text=titulo, bg="#e8f4f8", fg="#1a5276", font=("Segoe UI", 11, "bold"))
+        label.pack(pady=3)
+        if tooltip_text:
+            def show_tip(event):
+                tip = tk.Toplevel()
+                tip.wm_overrideredirect(True)
+                tip.geometry(f"+{event.x_root+10}+{event.y_root+10}")
+                tk.Label(tip, text=tooltip_text, bg="#fafdff", fg="#333333", relief="solid", borderwidth=1, font=("Segoe UI", 9)).pack()
+                label.tipwindow = tip
+            def hide_tip(event):
+                if hasattr(label, 'tipwindow'):
+                    label.tipwindow.destroy()
+            label.bind("<Enter>", show_tip)
+            label.bind("<Leave>", hide_tip)
 
     # Horas de trabajo
     marco_labor = tk.Frame(marco_combinado, bg="#e8f4f8")
@@ -111,13 +127,15 @@ def crear_ventana_principal(raiz):
     entrada_labor.pack()
 
     # Porcentaje de ganancia
-    marco_ganancia = tk.Frame(marco_combinado, bg="#e8f4f8")
+        entry = tk.Entry(frame, textvariable=variable, width=50, bg="#ffffff", fg="#333333", font=("Segoe UI", 10))
+        entry.pack(pady=5)
+        entry.config(relief="groove", bd=2)
     marco_ganancia.pack(side="left", padx=10)
     tk.Label(marco_ganancia, text="Porcentaje de ganancia (%):", bg="#e8f4f8", fg="#333333", font=("Arial", 9)).pack()
     entrada_ganancia = tk.Entry(marco_ganancia, bg="#ffffff", fg="#333333", font=("Arial", 9), width=10, justify="center")
     entrada_ganancia.insert(0, "35")
-    entrada_ganancia.pack()
-
+        crear_boton(marco_botones, texto="Seleccionar Archivo", comando=seleccionar_archivo, bg="#b6d7a8", fg="#222222", font=("Segoe UI", 10, "bold")).pack(side="left", padx=5)
+        if tooltip_text is not None:
     # Validación de entradas numéricas
     def validar_entradas_numericas():
         try:
